@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 Andreas Steffen
+ * Copyright (C) 2011-2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -975,7 +975,7 @@ METHOD(attest_db_t, list_files, void,
 		{
 			while (e->enumerate(e, &fid, &file))
 			{
-				printf("%4d: %s\n", fid, file);
+				printf("%6d: %s\n", fid, file);
 				count++;
 			}
 			e->destroy(e);
@@ -996,10 +996,10 @@ METHOD(attest_db_t, list_files, void,
 			{
 				if (did != last_did)
 				{
-					printf("%4d: %s\n", did, dir);
+					printf("%6d: %s\n", did, dir);
 					last_did = did;
 				}
-				printf("%4d:   %s\n", fid, file);
+				printf("%6d:   %s\n", fid, file);
 				count++;
 			}
 			e->destroy(e);
@@ -1188,18 +1188,19 @@ METHOD(attest_db_t, list_hashes, void,
 
 	if (this->pid && this->fid && this->did)
 	{
-		printf("%4d: %s\n", this->did, this->dir);
-		printf("%4d:   %s\n", this->fid, this->file);
+		printf("%6d: %s\n", this->did, this->dir);
+		printf("%6d:   %s\n", this->fid, this->file);
 		e = this->db->query(this->db,
-				"SELECT id, hash FROM file_hashes "
-				"WHERE algo = ? AND file = ? AND product = ?",
+				"SELECT h.id, h.hash FROM file_hashes AS h "
+				"JOIN versions AS v ON h.version = v.id "
+				"WHERE h.algo = ? AND h.file = ? AND v.product = ?",
 				DB_INT, this->algo, DB_INT, this->fid, DB_INT, this->pid,
 				DB_INT, DB_BLOB);
 		if (e)
 		{
 			while (e->enumerate(e, &id, &hash))
 			{
-				printf("%4d:     %#B\n", id, &hash);
+				printf("%6d:     %#B\n", id, &hash);
 				count++;
 			}
 			e->destroy(e);
@@ -1216,7 +1217,8 @@ METHOD(attest_db_t, list_hashes, void,
 				"FROM file_hashes AS h "
 				"JOIN files AS f ON h.file = f.id "
 				"JOIN directories AS d ON f.dir = d.id "
-				"WHERE h.algo = ? AND h.product = ? AND f.name = ? "
+				"JOIN versions AS v ON h.version = v.id "
+				"WHERE h.algo = ? AND v.product = ? AND f.name = ? "
 				"ORDER BY d.path, f.name, h.hash",
 				DB_INT, this->algo, DB_INT, this->pid, DB_TEXT, this->file,
 				DB_INT, DB_BLOB, DB_INT, DB_INT, DB_TEXT);
@@ -1226,15 +1228,15 @@ METHOD(attest_db_t, list_hashes, void,
 			{
 				if (did != did_old)
 				{
-					printf("%4d: %s\n", did, dir);
+					printf("%6d: %s\n", did, dir);
 					did_old = did;
 				}
 				if (fid != fid_old)
 				{
-					printf("%4d:   %s\n", fid, this->file);
+					printf("%6d:   %s\n", fid, this->file);
 					fid_old = fid;
 				}
-				printf("%4d:     %#B\n", id, &hash);
+				printf("%6d:     %#B\n", id, &hash);
 				count++;
 			}
 			e->destroy(e);
@@ -1246,12 +1248,13 @@ METHOD(attest_db_t, list_hashes, void,
 	}
 	else if (this->pid && this->did)
 	{
-		printf("%4d: %s\n", this->did, this->dir);
+		printf("%6d: %s\n", this->did, this->dir);
 		e = this->db->query(this->db,
 				"SELECT h.id, h.hash, f.id, f.name "
 				"FROM file_hashes AS h "
 				"JOIN files AS f ON h.file = f.id "
-				"WHERE h.algo = ? AND h.product = ? AND f.dir = ? "
+				"JOIN versions AS v ON h.version = v.id "
+				"WHERE h.algo = ? AND v.product = ? AND f.dir = ? "
 				"ORDER BY f.name, h.hash",
 				DB_INT, this->algo, DB_INT, this->pid, DB_INT, this->did,
 				DB_INT, DB_BLOB, DB_INT, DB_TEXT);
@@ -1261,10 +1264,10 @@ METHOD(attest_db_t, list_hashes, void,
 			{
 				if (fid != fid_old)
 				{
-					printf("%4d:   %s\n", fid, file);
+					printf("%6d:   %s\n", fid, file);
 					fid_old = fid;
 				}
-				printf("%4d:     %#B\n", id, &hash);
+				printf("%6d:     %#B\n", id, &hash);
 				count++;
 			}
 			e->destroy(e);
@@ -1281,7 +1284,8 @@ METHOD(attest_db_t, list_hashes, void,
 				"FROM file_hashes AS h "
 				"JOIN files AS f ON h.file = f.id "
 				"JOIN directories AS d ON f.dir = d.id "
-				"WHERE h.algo = ? AND h.product = ? "
+				"JOIN versions AS v ON h.version = v.id "
+				"WHERE h.algo = ? AND v.product = ? "
 				"ORDER BY d.path, f.name, h.hash",
 				DB_INT, this->algo, DB_INT, this->pid,
 				DB_INT, DB_BLOB, DB_INT, DB_TEXT, DB_INT, DB_TEXT);
@@ -1291,15 +1295,15 @@ METHOD(attest_db_t, list_hashes, void,
 			{
 				if (did != did_old)
 				{
-					printf("%4d: %s\n", did, dir);
+					printf("%6d: %s\n", did, dir);
 					did_old = did;
 				}
 				if (fid != fid_old)
 				{
-					printf("%4d:   %s\n", fid, file);
+					printf("%6d:   %s\n", fid, file);
 					fid_old = fid;
 				}
-				printf("%4d:     %#B\n", id, &hash);
+				printf("%6d:     %#B\n", id, &hash);
 				count++;
 			}
 			e->destroy(e);
@@ -1313,7 +1317,8 @@ METHOD(attest_db_t, list_hashes, void,
 	{
 		e = this->db->query(this->db,
 				"SELECT h.id, h.hash, p.id, p.name FROM file_hashes AS h "
-				"JOIN products AS p ON h.product = p.id "
+				"JOIN versions AS v ON h.version = v.id "
+				"JOIN products AS p ON v.product = p.id "
 				"WHERE h.algo = ? AND h.file = ? "
 				"ORDER BY p.name, h.hash",
 				DB_INT, this->algo, DB_INT, this->fid,
@@ -1324,10 +1329,10 @@ METHOD(attest_db_t, list_hashes, void,
 			{
 				if (pid != pid_old)
 				{
-					printf("%4d: %s\n", pid, product);
+					printf("%6d: %s\n", pid, product);
 					pid_old = pid;
 				}
-				printf("%4d:   %#B\n", id, &hash);
+				printf("%6d:   %#B\n", id, &hash);
 				count++;
 			}
 			e->destroy(e);
@@ -1345,7 +1350,8 @@ METHOD(attest_db_t, list_hashes, void,
 				"FROM file_hashes AS h "
 				"JOIN files AS f ON h.file = f.id "
 				"JOIN directories AS d ON f.dir = d.id "
-				"JOIN products AS p ON h.product = p.id "
+				"JOIN versions AS v ON h.version = v.id "
+				"JOIN products AS p ON v.product = p.id "
 				"WHERE h.algo = ? AND f.name = ? "
 				"ORDER BY d.path, f.name, p.name, h.hash",
 				DB_INT, this->algo, DB_TEXT, this->file,
@@ -1356,21 +1362,21 @@ METHOD(attest_db_t, list_hashes, void,
 			{
 				if (did != did_old)
 				{
-					printf("%4d: %s\n", did, dir);
+					printf("%6d: %s\n", did, dir);
 					did_old = did;
 				}
 				if (fid != fid_old)
 				{
-					printf("%4d:   %s\n", fid, this->file);
+					printf("%6d:   %s\n", fid, this->file);
 					fid_old = fid;
 					pid_old = 0;
 				}
 				if (pid != pid_old)
 				{
-					printf("%4d:     %s\n", pid, product);
+					printf("%6d:     %s\n", pid, product);
 					pid_old = pid;
 				}
-				printf("%4d:     %#B\n", id, &hash);
+				printf("%6d:     %#B\n", id, &hash);
 				count++;
 			}
 			e->destroy(e);
@@ -1386,7 +1392,8 @@ METHOD(attest_db_t, list_hashes, void,
 				"SELECT h.id, h.hash, f.id, f.name, p.id, p.name "
 				"FROM file_hashes AS h "
 				"JOIN files AS f ON h.file = f.id "
-				"JOIN products AS p ON h.product = p.id "
+				"JOIN versions AS v ON h.version = v.id "
+				"JOIN products AS p ON v.product = p.id "
 				"WHERE h.algo = ? AND f.dir = ? "
 				"ORDER BY f.name, p.name, h.hash",
 				DB_INT, this->algo, DB_INT, this->did,
@@ -1397,16 +1404,16 @@ METHOD(attest_db_t, list_hashes, void,
 			{
 				if (fid != fid_old)
 				{
-					printf("%4d: %s\n", fid, file);
+					printf("%6d: %s\n", fid, file);
 					fid_old = fid;
 					pid_old = 0;
 				}
 				if (pid != pid_old)
 				{
-					printf("%4d:   %s\n", pid, product);
+					printf("%6d:   %s\n", pid, product);
 					pid_old = pid;
 				}
-				printf("%4d:     %#B\n", id, &hash);
+				printf("%6d:     %#B\n", id, &hash);
 				count++;
 			}
 			e->destroy(e);
@@ -1423,7 +1430,8 @@ METHOD(attest_db_t, list_hashes, void,
 				"FROM file_hashes AS h "
 				"JOIN files AS f ON h.file = f.id "
 				"JOIN directories AS d ON f.dir = d.id "
-				"JOIN products AS p on h.product = p.id "
+				"JOIN versions AS v ON h.version = v.id "
+				"JOIN products AS p on v.product = p.id "
 				"WHERE h.algo = ? "
 				"ORDER BY d.path, f.name, p.name, h.hash",
 				DB_INT, this->algo, DB_INT, DB_BLOB, DB_INT, DB_TEXT,
@@ -1435,21 +1443,21 @@ METHOD(attest_db_t, list_hashes, void,
 			{
 				if (did != did_old)
 				{
-					printf("%4d: %s\n", did, dir);
+					printf("%6d: %s\n", did, dir);
 					did_old = did;
 				}
 				if (fid != fid_old)
 				{
-					printf("%4d:   %s\n", fid, file);
+					printf("%6d:   %s\n", fid, file);
 					fid_old = fid;
 					pid_old = 0;
 				}
 				if (pid != pid_old)
 				{
-					printf("%4d:     %s\n", pid, product);
+					printf("%6d:     %s\n", pid, product);
 					pid_old = pid;
 				}
-				printf("%4d:       %#B\n", id, &hash);
+				printf("%6d:       %#B\n", id, &hash);
 				count++;
 			}
 			e->destroy(e);
@@ -1617,8 +1625,9 @@ static bool insert_file_hash(private_attest_db_t *this,
 	label = "could not be created";
 
 	e = this->db->query(this->db,
-		"SELECT hash FROM file_hashes WHERE algo = ? "
-		"AND file = ? AND product = ? AND device = 0",
+		"SELECT h.hash FROM file_hashes AS h WHERE algo = ? "
+		"JOIN versions AS v ON h.version = v.id "
+		"AND h.file = ? AND v.product = ? AND h.device = 0",
 		DB_INT, algo, DB_UINT, fid, DB_UINT, this->pid, DB_BLOB);
 
 	if (!e)
@@ -1816,8 +1825,9 @@ METHOD(attest_db_t, delete, bool,
 	if (this->algo && this->pid && this->fid)
 	{
 		success = this->db->execute(this->db, NULL,
-								"DELETE FROM file_hashes "
-								"WHERE algo = ? AND product = ? AND file = ?",
+								"DELETE FROM file_hashes AS h "
+								"JOIN versions AS v ON h.version = v.id "
+								"WHERE h.algo = ? AND v.product = ? AND h.file = ?",
 								DB_UINT, this->algo, DB_UINT, this->pid,
 								DB_UINT, this->fid) > 0;
 
